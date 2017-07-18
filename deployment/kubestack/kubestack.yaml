@@ -1,0 +1,104 @@
+# This ConfigMap is used to configure a self-hosted kubestack installation.
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: kubestack-config
+  namespace: kube-system
+data:
+  # The kubestack configuration to install on each node.
+  kubestack_config: |-
+    [Global]
+    auth-url = https://10.140.0.3:5000/identity_admin/v2.0
+    username = admin
+    password = password
+    tenant-name = admin
+    region = RegionOne
+    ext-net-id = 408e9232-29fd-4f34-b6bc-62e229e62a22
+    [Plugin]
+    plugin-name = ovs
+    integration-bridge = br-int
+
+  # The CNI network configuration to install on each node.
+  cni_network_config: |-
+    {
+       "cniVersion": "0.3.1",
+       "name": "net",
+       "type": "kubestack",
+       "kubestack-config": "/etc/kubestack.conf"
+    }
+
+---
+
+# This manifest installs kubestack CNI plugins and network config
+# on each master and worker node in a Kubernetes cluster.
+kind: DaemonSet
+apiVersion: extensions/v1beta1
+metadata:
+  name: kubestack
+  namespace: kube-system
+  labels:
+    k8s-app: kubestack
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kubestack
+  template:
+    metadata:
+      labels:
+        k8s-app: kubestack
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        scheduler.alpha.kubernetes.io/tolerations: |
+          [{"key": "dedicated", "value": "master", "effect": "NoSchedule" },
+           {"key":"CriticalAddonsOnly", "operator":"Exists"}]
+    spec:
+      hostNetwork: true
+      serviceAccountName: kubestack
+      containers:
+        # This container installs the kubestack CNI binaries
+        # and CNI network config file on each node.
+        - name: install-cni
+          image: wadelee/kubestack:v0.1
+          imagePullPolicy: Never
+          command: ["/install-cni.sh"]
+          env:
+            # The kubestack config to install on each node.
+            - name: KUBESTACK_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: kubestack-config
+                  key: kubestack_config
+            # The CNI network config to install on each node.
+            - name: CNI_NETWORK_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: kubestack-config
+                  key: cni_network_config
+          volumeMounts:
+            - mountPath: /var/run/openvswitch
+              name: var-run-openvswitch
+              readOnly: false
+            - mountPath: /host/opt/cni/bin
+              name: cni-bin-dir
+            - mountPath: /host/etc/cni/net.d
+              name: cni-net-dir
+      volumes:
+        # Used by openvswitch.
+        - name: var-run-openvswitch
+          hostPath:
+            path: /var/run/openvswitch
+        # Used to install CNI.
+        - name: cni-bin-dir
+          hostPath:
+            path: /opt/cni/bin
+        - name: cni-net-dir
+          hostPath:
+            path: /etc/cni/net.d
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubestack
+  namespace: kube-system
