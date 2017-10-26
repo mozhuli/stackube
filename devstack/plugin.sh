@@ -97,7 +97,7 @@ gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
 EOF'
         sudo setenforce 0
         sudo sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
-        sudo yum install -y kubelet-1.7.5-0 kubeadm-1.7.5-0 kubectl-1.7.5-0
+        sudo yum install -y kubelet-1.8.2-0 kubeadm-1.8.2-0 kubectl-1.8.2-0
     elif is_ubuntu; then
         sudo apt-get update && sudo apt-get install -y apt-transport-https
         sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
@@ -105,7 +105,7 @@ EOF'
 deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF'
         sudo apt-get update
-        sudo apt-get install -y kubelet=1.7.5-00 kubeadm=1.7.5-00 kubectl=1.7.5-00
+        sudo apt-get install -y kubelet=1.8.2-00 kubeadm=1.8.2-00 kubectl=1.8.2-00
     else
         exit_distro_not_supported
     fi
@@ -173,7 +173,7 @@ function install_node {
 
 function configure_kubelet {
     if [ "${CONTAINER_RUNTIME}" = "frakti" ]; then
-        sudo sed -i '2 i\Environment="KUBELET_EXTRA_ARGS=--container-runtime=remote --container-runtime-endpoint=/var/run/frakti.sock --feature-gates=AllAlpha=true"' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+        sudo sed -i '2 i\Environment="KUBELET_EXTRA_ARGS=--container-runtime=remote --container-runtime-endpoint=/var/run/frakti.sock --feature-gates=AllAlpha=true --fail-swap-on=false"' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
         sudo systemctl daemon-reload
     fi
 }

@@ -42,12 +42,12 @@ gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
        https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
 EOF
 
-yum install -y kubelet-1.7.5-0 kubeadm-1.7.5-0 kubectl-1.7.5-0
+yum install -y kubelet-1.8.2-0 kubeadm-1.8.2-0 kubectl-1.8.2-0
 
 # configure_kubelet
 unitFile='/etc/systemd/system/kubelet.service.d/10-kubeadm.conf'
 sed -i '/^Environment="KUBELET_EXTRA_ARGS=/d'  ${unitFile} 
-sed -i '/\[Service\]/aEnvironment="KUBELET_EXTRA_ARGS=--container-runtime=remote --container-runtime-endpoint=/var/run/frakti.sock --feature-gates=AllAlpha=true"'  ${unitFile} 
+sed -i '/\[Service\]/aEnvironment="KUBELET_EXTRA_ARGS=--container-runtime=remote --container-runtime-endpoint=/var/run/frakti.sock --feature-gates=AllAlpha=true --fail-swap-on=false"'  ${unitFile} 
 
 
 systemctl daemon-reload
